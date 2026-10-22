@@ -1,0 +1,7 @@
+@address = https://localhost:7157
+
+
+
+GET {{address}}/api/categories
+
+###
