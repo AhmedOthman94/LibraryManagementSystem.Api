@@ -2,10 +2,9 @@
 
 namespace LibraryManagementSystemAPI.Entities
 {
-	public class Category
+	public class Category : BaseEntity
 	{
-		public Guid Id { get; set; }
-		[Required]
 		public required string Name { get; set; } 
+		public string? Description { get; set; }
 	}
 }

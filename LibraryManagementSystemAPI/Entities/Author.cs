@@ -1,10 +1,16 @@
 ﻿namespace LibraryManagementSystemAPI.Entities
 {
-	public class Author
+	public class Author : BaseEntity
 	{
-		public Guid Id { get; set; }
 		public required string FirstName {  get; set; }
 		public required string LastName { get; set; }
-		public int? YearOfbirth { get; set; }
+
+		public string? Biography { get; set; }
+		public string? Nationality { get; set; }
+
+		public DateOnly? DateOfBirth { get; set; }
+		public DateOnly? DateOfDeath { get; set; }
+
+		public string? ImageUrl { get; set; }
 	}
 }
