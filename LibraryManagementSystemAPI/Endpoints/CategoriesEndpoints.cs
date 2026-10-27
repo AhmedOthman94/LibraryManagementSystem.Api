@@ -1,53 +1,60 @@
-﻿using LibraryManagementSystemAPI.Entities;
+﻿using LibraryManagementSystemAPI.DataAccess;
+using LibraryManagementSystemAPI.Dtos;
+using LibraryManagementSystemAPI.Mappings;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystemAPI.Endpoints
 {
 	public static class CategoriesEndpoints
 	{
-		private static List<Category> _categories =
-		[
-			new Category{Id = Guid.NewGuid(), Name = "Biography"},
-			new Category{Id = Guid.NewGuid(), Name = "Novel"}
-		];
-
-		public static void MapCategoryEndpoints(
-			this IEndpointRouteBuilder app
-		)
+		public static void MapCategoryEndpoints(this IEndpointRouteBuilder app)
 		{
 			var group = app
 				.MapGroup("api/categories")
 				.WithTags("Categories");
 
-			group.MapGet("/{id:Guid}", GetById)
-				.WithName("GetCategoryById")
-				.ProducesProblem(StatusCodes.Status404NotFound)
-				.ProducesProblem(StatusCodes.Status200OK);
-				
-
 			group.MapGet("/", GetAll);
-			//.Produces<IEnumerable<Category>>(StatusCodes.Status200OK);
+
+			group.MapGet("/{id:guid}", GetById)
+				.WithName("GetCategoryById")
+				.ProducesProblem(StatusCodes.Status404NotFound);
 
 			group.MapPost("/", Create)
 				.ProducesProblem(StatusCodes.Status400BadRequest)
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
-			group.MapPut("/{id:Guid}", Update)
+			group.MapPut("/{id:guid}", Update)
 				.ProducesProblem(StatusCodes.Status400BadRequest)
 				.ProducesProblem(StatusCodes.Status404NotFound)
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
-			group.MapDelete("/{id:Guid}", Delete)
-				.ProducesProblem(StatusCodes.Status404NotFound)
-				.ProducesProblem(StatusCodes.Status204NoContent);
-				
+			group.MapDelete("/{id:guid}", Delete)
+				.ProducesProblem(StatusCodes.Status404NotFound);
 		}
 
-	
-		private static async Task<Results<Ok<Category>, ProblemHttpResult>> GetById(Guid id)
+		private static async Task<Ok<List<CategoryResponse>>> GetAll(
+			LibraryDbContext db,
+			CancellationToken ct)
 		{
-			var category = _categories.FirstOrDefault(c => c.Id == id);
+			var categories = await db.Categories
+				.AsNoTracking()
+				.OrderBy(c => c.Name)
+				.Select(c => c.ToResponse())
+				.ToListAsync(ct);
+
+			return TypedResults.Ok(categories);
+		}
+
+		private static async Task<Results<Ok<CategoryResponse>, ProblemHttpResult>> GetById(
+			Guid id,
+			LibraryDbContext db,
+			CancellationToken ct)
+		{
+			var category = await db.Categories
+				.AsNoTracking()
+				.FirstOrDefaultAsync(c => c.Id == id, ct);
+
 			if (category is null)
 			{
 				return TypedResults.Problem(
@@ -56,102 +63,64 @@ namespace LibraryManagementSystemAPI.Endpoints
 				);
 			}
 
-			return TypedResults.Ok(category);
+			return TypedResults.Ok(category.ToResponse());
 		}
 
-
-
-		private static async Task<Ok<List<Category>>> GetAll()
+		private static async Task<Results<CreatedAtRoute<CategoryResponse>, ProblemHttpResult>> Create(
+			CreateCategoryRequest request,
+			LibraryDbContext db,
+			CancellationToken ct)
 		{
-			var categories = _categories;
-
-			return TypedResults.Ok(categories);
-		}
-
-		private static async Task<Results<CreatedAtRoute<Category>, ProblemHttpResult>> Create(
-			[FromBody] Category category
-		)
-		{
-			if(string.IsNullOrWhiteSpace(category.Name))
+			if (string.IsNullOrWhiteSpace(request.Name))
 			{
 				return TypedResults.Problem(
-					detail: $"Invalid input, try again.",
+					detail: "Category name is required.",
 					statusCode: StatusCodes.Status400BadRequest
 				);
 			}
 
-			if (_categories.Any(exisitCat => exisitCat.Id == category.Id)) 
+			var name = request.Name.Trim().ToLower();
+			var nameExists = await db.Categories
+				.AnyAsync(c => c.Name.ToLower() == name, ct);
+
+			if (nameExists)
 			{
 				return TypedResults.Problem(
-					detail: $"Category with Id: {category.Id} already exists.",
+					detail: $"Category with name: {request.Name.Trim()} already exists.",
 					statusCode: StatusCodes.Status409Conflict
 				);
 			}
 
-			if (_categories.Any(exisitCat => exisitCat.Name == category.Name))
-			{
-				return TypedResults.Problem(
-					detail: $"Category with name: {category.Name} already exists.",
-					statusCode: StatusCodes.Status409Conflict
-				);
-			}
+			var category = request.ToEntity();
 
-			_categories.Add(category);
+			db.Categories.Add(category);
+			await db.SaveChangesAsync(ct);
 
 			return TypedResults.CreatedAtRoute(
-					category,
-					"GetCategoryById",
-					new { id = category.Id}
+				category.ToResponse(),
+				"GetCategoryById",
+				new { id = category.Id }
 			);
 		}
 
-		private static async Task<Results<Ok<Category>, ProblemHttpResult>> Update(
+		private static async Task<Results<Ok<CategoryResponse>, ProblemHttpResult>> Update(
 			Guid id,
-			[FromBody] Category updatedCategory 
-		) 
+			UpdateCategoryRequest request,
+			LibraryDbContext db,
+			CancellationToken ct)
 		{
-			if (string.IsNullOrWhiteSpace(updatedCategory.Name))
+			if (string.IsNullOrWhiteSpace(request.Name))
 			{
 				return TypedResults.Problem(
-					detail: "Invalid input, try again",
+					detail: "Category name is required.",
 					statusCode: StatusCodes.Status400BadRequest
 				);
 			}
 
-			var existingCategory = _categories.FirstOrDefault(c => c.Id == id);
+			var category = await db.Categories
+				.FirstOrDefaultAsync(c => c.Id == id, ct);
 
-			if (existingCategory is null)
-			{
-				return TypedResults.Problem(
-					detail: $"Category with Id: {id} was not found.",
-					statusCode : StatusCodes.Status404NotFound
-				);
-			}
-
-			if (_categories.Any(
-				c => c.Id != id 
-				&& c.Name == updatedCategory.Name))
-			{
-				return TypedResults.Problem(
-					detail: $"Category with name: {updatedCategory.Name} already exists.",
-					statusCode: StatusCodes.Status409Conflict
-				);
-			}
-
-			existingCategory.Name = updatedCategory.Name;
-
-			return TypedResults.Ok(existingCategory);
-		}
-
-		private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
-			Guid id
-		)
-		{
-			var category = _categories.FirstOrDefault(
-				c => c.Id == id
-			);
-			
-			if (category is null) 
+			if (category is null)
 			{
 				return TypedResults.Problem(
 					detail: $"Category with Id: {id} was not found.",
@@ -159,7 +128,42 @@ namespace LibraryManagementSystemAPI.Endpoints
 				);
 			}
 
-			_categories.Remove(category);
+			var name = request.Name.Trim().ToLower();
+			var nameTaken = await db.Categories
+				.AnyAsync(c => c.Id != id && c.Name.ToLower() == name, ct);
+
+			if (nameTaken)
+			{
+				return TypedResults.Problem(
+					detail: $"Category with name: {request.Name.Trim()} already exists.",
+					statusCode: StatusCodes.Status409Conflict
+				);
+			}
+
+			request.ApplyTo(category);
+			await db.SaveChangesAsync(ct);
+
+			return TypedResults.Ok(category.ToResponse());
+		}
+
+		private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
+			Guid id,
+			LibraryDbContext db,
+			CancellationToken ct)
+		{
+			var category = await db.Categories
+				.FirstOrDefaultAsync(c => c.Id == id, ct);
+
+			if (category is null)
+			{
+				return TypedResults.Problem(
+					detail: $"Category with Id: {id} was not found.",
+					statusCode: StatusCodes.Status404NotFound
+				);
+			}
+
+			db.Categories.Remove(category);
+			await db.SaveChangesAsync(ct);
 
 			return TypedResults.NoContent();
 		}
