@@ -1,119 +1,98 @@
-﻿using LibraryManagementSystemAPI.Entities;
+﻿using LibraryManagementSystemAPI.DataAccess;
+using LibraryManagementSystemAPI.Dtos;
+using LibraryManagementSystemAPI.Mappings;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystemAPI.Controllers
 {
 	[ApiController]
 	[Route("api/authors")]
-	public class AuthorsController : ControllerBase
+	public class AuthorsController(LibraryDbContext db) : ControllerBase
 	{
-		private static List<Author> _authors =
-		[
-			new Author {Id = Guid.NewGuid(), FirstName = "Ahmed", LastName = "Othman", YearOfbirth = 1988},
-			new Author {Id = Guid.NewGuid(), FirstName = "Sara", LastName = "Ali", YearOfbirth = 1991},
-			new Author {Id = Guid.NewGuid(), FirstName = "Alla", LastName = "Gaber", YearOfbirth = 1990},
-			new Author {Id = Guid.NewGuid(), FirstName = "Emy", LastName = "Ahmed", YearOfbirth = 1964},
-		];
-
-		[HttpGet("{id:Guid}")]
-		[ProducesResponseType(typeof(Author), StatusCodes.Status200OK)]
-		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-		public async Task<ActionResult<Author>> GetById(Guid id)
+		[HttpGet]
+		[ProducesResponseType(typeof(IEnumerable<AuthorResponse>), StatusCodes.Status200OK)]
+		public async Task<ActionResult<IEnumerable<AuthorResponse>>> GetAll(CancellationToken ct)
 		{
-			var author = _authors.FirstOrDefault(a => a.Id == id);
+			var authors = await db.Authors
+				.AsNoTracking()
+				.OrderBy(a => a.LastName)
+				.ThenBy(a => a.FirstName)
+				.Select(a => a.ToResponse())
+				.ToListAsync(ct);
+
+			return Ok(authors);
+		}
+
+		[HttpGet("{id:guid}")]
+		[ProducesResponseType(typeof(AuthorResponse), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+		public async Task<ActionResult<AuthorResponse>> GetById(Guid id, CancellationToken ct)
+		{
+			var author = await db.Authors
+				.AsNoTracking()
+				.FirstOrDefaultAsync(a => a.Id == id, ct);
+
 			if (author is null)
 			{
 				return Problem(
 					detail: $"Author with Id: {id} was not found.",
-					statusCode: StatusCodes.Status200OK
+					statusCode: StatusCodes.Status404NotFound
 				);
 			}
 
-			return Ok(author);
-		}
-
-		[HttpGet]
-		[ProducesResponseType(typeof(IEnumerable<Author>), StatusCodes.Status200OK)]
-		public async Task<ActionResult<IEnumerable<Author>>> GetAll()
-		{
-			return Ok(_authors);
+			return Ok(author.ToResponse());
 		}
 
 		[HttpPost]
-		[ProducesResponseType(typeof(Author), StatusCodes.Status201Created)]
+		[ProducesResponseType(typeof(AuthorResponse), StatusCodes.Status201Created)]
 		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-
-		public async Task<ActionResult<Author>> Create(Author createdAuthor)
+		public async Task<ActionResult<AuthorResponse>> Create(
+			CreateAuthorRequest request,
+			CancellationToken ct)
 		{
-			if (string.IsNullOrWhiteSpace(createdAuthor.FirstName)
-				|| string.IsNullOrWhiteSpace(createdAuthor.LastName)
-			)
+			var error = Validate(
+				request.FirstName, request.LastName,
+				request.DateOfBirth, request.DateOfDeath);
+
+			if (error is not null)
 			{
-				return Problem(
-					detail: "First and Last name are mandatory.",
-					statusCode: StatusCodes.Status400BadRequest
-				);
+				return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest);
 			}
 
-			var existingAuthor = _authors.FirstOrDefault(a => a.Id == createdAuthor.Id);
-			if (existingAuthor is not null)
-			{
-				return Problem(
-					detail: $"Author with Id: {createdAuthor.Id} already exists.",
-					statusCode: StatusCodes.Status409Conflict
-				);
-			}
+			var author = request.ToEntity();
 
-			_authors.Add(createdAuthor);
+			db.Authors.Add(author);
+			await db.SaveChangesAsync(ct);
 
 			return CreatedAtAction(
 				nameof(GetById),
-				new { id = createdAuthor.Id },
-				createdAuthor
+				new { id = author.Id },
+				author.ToResponse()
 			);
 		}
 
-		[HttpPut("{id:Guid}")]
-		[ProducesResponseType(typeof(Author), StatusCodes.Status200OK)]
+		[HttpPut("{id:guid}")]
+		[ProducesResponseType(typeof(AuthorResponse), StatusCodes.Status200OK)]
 		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-
-		public async Task<ActionResult<Author>> Update(Guid id,
-		Author updatedAuthor)
+		public async Task<ActionResult<AuthorResponse>> Update(
+			Guid id,
+			UpdateAuthorRequest request,
+			CancellationToken ct)
 		{
-			if (string.IsNullOrWhiteSpace(updatedAuthor.FirstName)
-				|| string.IsNullOrWhiteSpace(updatedAuthor.LastName)
-			)
+			var error = Validate(
+				request.FirstName, request.LastName,
+				request.DateOfBirth, request.DateOfDeath);
+
+			if (error is not null)
 			{
-				return Problem(
-					detail: "First and Last name are mandatory.",
-					statusCode: StatusCodes.Status400BadRequest
-				);
+				return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest);
 			}
 
-			var existingAuthor = _authors.FirstOrDefault(a => a.Id == updatedAuthor.Id);
-			if (existingAuthor is null)
-			{
-				return Problem(
-					detail: $"Author with Id: {updatedAuthor.Id} was not found.",
-					statusCode: StatusCodes.Status404NotFound
-				);
-			}
+			var author = await db.Authors
+				.FirstOrDefaultAsync(a => a.Id == id, ct);
 
-			existingAuthor.FirstName = updatedAuthor.FirstName;
-			existingAuthor.LastName = updatedAuthor.LastName;
-			existingAuthor.YearOfbirth = updatedAuthor.YearOfbirth;
-
-			return Ok(existingAuthor);
-		}
-
-		[HttpDelete("{id:Guid}")]
-		[ProducesResponseType(StatusCodes.Status204NoContent)]
-		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-		public async Task<ActionResult> Delete(Guid id)
-		{
-			var author = _authors.FirstOrDefault(a => a.Id == id);
 			if (author is null)
 			{
 				return Problem(
@@ -121,9 +100,66 @@ namespace LibraryManagementSystemAPI.Controllers
 					statusCode: StatusCodes.Status404NotFound
 				);
 			}
-			_authors.Remove(author);
+
+			request.ApplyTo(author);
+			await db.SaveChangesAsync(ct);
+
+			return Ok(author.ToResponse());
+		}
+
+		[HttpDelete("{id:guid}")]
+		[ProducesResponseType(StatusCodes.Status204NoContent)]
+		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+		public async Task<ActionResult> Delete(Guid id, CancellationToken ct)
+		{
+			var author = await db.Authors
+				.FirstOrDefaultAsync(a => a.Id == id, ct);
+
+			if (author is null)
+			{
+				return Problem(
+					detail: $"Author with Id: {id} was not found.",
+					statusCode: StatusCodes.Status404NotFound
+				);
+			}
+
+			db.Authors.Remove(author);
+			await db.SaveChangesAsync(ct);
 
 			return NoContent();
+		}
+
+		// Shared checks for Create and Update.
+		// Returns an error message, or null if everything is OK.
+		private static string? Validate(
+			string? firstName,
+			string? lastName,
+			DateOnly? dateOfBirth,
+			DateOnly? dateOfDeath)
+		{
+			if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+			{
+				return "First and last name are required.";
+			}
+
+			var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+			if (dateOfBirth > today)
+			{
+				return "Date of birth can't be in the future.";
+			}
+
+			if (dateOfDeath > today)
+			{
+				return "Date of death can't be in the future.";
+			}
+
+			if (dateOfBirth is not null && dateOfDeath is not null && dateOfDeath < dateOfBirth)
+			{
+				return "Date of death can't be before date of birth.";
+			}
+
+			return null;
 		}
 	}
 }
