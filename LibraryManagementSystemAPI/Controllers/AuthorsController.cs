@@ -8,7 +8,9 @@ namespace LibraryManagementSystemAPI.Controllers
 {
 	[ApiController]
 	[Route("api/authors")]
-	public class AuthorsController(LibraryDbContext db) : ControllerBase
+	public class AuthorsController(
+							LibraryDbContext db) 
+	: ControllerBase
 	{
 		[HttpGet]
 		[ProducesResponseType(typeof(IEnumerable<AuthorResponse>), StatusCodes.Status200OK)]
@@ -129,8 +131,6 @@ namespace LibraryManagementSystemAPI.Controllers
 			return NoContent();
 		}
 
-		// Shared checks for Create and Update.
-		// Returns an error message, or null if everything is OK.
 		private static string? Validate(
 			string? firstName,
 			string? lastName,
