@@ -53,15 +53,6 @@ namespace LibraryManagementSystemAPI.Controllers
 			CreateAuthorRequest request,
 			CancellationToken ct)
 		{
-			var error = Validate(
-				request.FirstName, request.LastName,
-				request.DateOfBirth, request.DateOfDeath);
-
-			if (error is not null)
-			{
-				return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest);
-			}
-
 			var author = request.ToEntity();
 
 			db.Authors.Add(author);
@@ -83,15 +74,6 @@ namespace LibraryManagementSystemAPI.Controllers
 			UpdateAuthorRequest request,
 			CancellationToken ct)
 		{
-			var error = Validate(
-				request.FirstName, request.LastName,
-				request.DateOfBirth, request.DateOfDeath);
-
-			if (error is not null)
-			{
-				return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest);
-			}
-
 			var author = await db.Authors
 				.FirstOrDefaultAsync(a => a.Id == id, ct);
 
@@ -129,37 +111,6 @@ namespace LibraryManagementSystemAPI.Controllers
 			await db.SaveChangesAsync(ct);
 
 			return NoContent();
-		}
-
-		private static string? Validate(
-			string? firstName,
-			string? lastName,
-			DateOnly? dateOfBirth,
-			DateOnly? dateOfDeath)
-		{
-			if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
-			{
-				return "First and last name are required.";
-			}
-
-			var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-			if (dateOfBirth > today)
-			{
-				return "Date of birth can't be in the future.";
-			}
-
-			if (dateOfDeath > today)
-			{
-				return "Date of death can't be in the future.";
-			}
-
-			if (dateOfBirth is not null && dateOfDeath is not null && dateOfDeath < dateOfBirth)
-			{
-				return "Date of death can't be before date of birth.";
-			}
-
-			return null;
 		}
 	}
 }

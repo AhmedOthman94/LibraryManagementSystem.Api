@@ -1,5 +1,6 @@
 ﻿using LibraryManagementSystemAPI.DataAccess;
 using LibraryManagementSystemAPI.Dtos;
+using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Mappings;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -21,11 +22,11 @@ namespace LibraryManagementSystemAPI.Endpoints
 				.ProducesProblem(StatusCodes.Status404NotFound);
 
 			group.MapPost("/", Create)
-				.ProducesProblem(StatusCodes.Status400BadRequest)
+				.WithValidation<CreateCategoryRequest>()
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
 			group.MapPut("/{id:guid}", Update)
-				.ProducesProblem(StatusCodes.Status400BadRequest)
+				.WithValidation<UpdateCategoryRequest>()
 				.ProducesProblem(StatusCodes.Status404NotFound)
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
@@ -71,14 +72,6 @@ namespace LibraryManagementSystemAPI.Endpoints
 			LibraryDbContext db,
 			CancellationToken ct)
 		{
-			if (string.IsNullOrWhiteSpace(request.Name))
-			{
-				return TypedResults.Problem(
-					detail: "Category name is required.",
-					statusCode: StatusCodes.Status400BadRequest
-				);
-			}
-
 			var name = request.Name.Trim().ToLower();
 			var nameExists = await db.Categories
 				.AnyAsync(c => c.Name.ToLower() == name, ct);
@@ -109,14 +102,6 @@ namespace LibraryManagementSystemAPI.Endpoints
 			LibraryDbContext db,
 			CancellationToken ct)
 		{
-			if (string.IsNullOrWhiteSpace(request.Name))
-			{
-				return TypedResults.Problem(
-					detail: "Category name is required.",
-					statusCode: StatusCodes.Status400BadRequest
-				);
-			}
-
 			var category = await db.Categories
 				.FirstOrDefaultAsync(c => c.Id == id, ct);
 
