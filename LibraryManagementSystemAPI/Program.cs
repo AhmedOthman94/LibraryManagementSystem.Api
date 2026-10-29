@@ -35,6 +35,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapCategoryEndpoints();
+app.MapBookEndpoints();
 app.MapControllers();
 
 app.Run();

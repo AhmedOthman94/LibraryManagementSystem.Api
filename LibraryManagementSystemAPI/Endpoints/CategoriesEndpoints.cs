@@ -31,7 +31,8 @@ namespace LibraryManagementSystemAPI.Endpoints
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
 			group.MapDelete("/{id:guid}", Delete)
-				.ProducesProblem(StatusCodes.Status404NotFound);
+				.ProducesProblem(StatusCodes.Status404NotFound)
+				.ProducesProblem(StatusCodes.Status409Conflict);
 		}
 
 		private static async Task<Ok<List<CategoryResponse>>> GetAll(
@@ -144,6 +145,16 @@ namespace LibraryManagementSystemAPI.Endpoints
 				return TypedResults.Problem(
 					detail: $"Category with Id: {id} was not found.",
 					statusCode: StatusCodes.Status404NotFound
+				);
+			}
+
+			var hasBooks = await db.Books.AnyAsync(b => b.CategoryId == id, ct);
+
+			if (hasBooks)
+			{
+				return TypedResults.Problem(
+					detail: "This category still has books. Move or delete them first.",
+					statusCode: StatusCodes.Status409Conflict
 				);
 			}
 

@@ -94,6 +94,7 @@ namespace LibraryManagementSystemAPI.Controllers
 		[HttpDelete("{id:guid}")]
 		[ProducesResponseType(StatusCodes.Status204NoContent)]
 		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
 		public async Task<ActionResult> Delete(Guid id, CancellationToken ct)
 		{
 			var author = await db.Authors
@@ -104,6 +105,16 @@ namespace LibraryManagementSystemAPI.Controllers
 				return Problem(
 					detail: $"Author with Id: {id} was not found.",
 					statusCode: StatusCodes.Status404NotFound
+				);
+			}
+
+			var hasBooks = await db.BookAuthors.AnyAsync(ba => ba.AuthorId == id, ct);
+
+			if (hasBooks)
+			{
+				return Problem(
+					detail: "This author still has books. Remove the author from them first.",
+					statusCode: StatusCodes.Status409Conflict
 				);
 			}
 

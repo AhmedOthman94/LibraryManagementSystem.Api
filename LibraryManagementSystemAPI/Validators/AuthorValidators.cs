@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using LibraryManagementSystemAPI.Dtos;
+using LibraryManagementSystemAPI.Common;
 
 namespace LibraryManagementSystemAPI.Validators
 {
@@ -23,7 +24,7 @@ namespace LibraryManagementSystemAPI.Validators
 
 			RuleFor(x => x.ImageUrl)
 				.MaximumLength(500).WithMessage("Image URL can't be longer than 500 characters.")
-				.Must(BeAValidHttpUrl).WithMessage("Image URL must be a valid http or https link.")
+				.Must(UrlHelper.IsValidHttpUrl).WithMessage("Image URL must be a valid http or https link.")
 				.When(x => !string.IsNullOrWhiteSpace(x.ImageUrl));
 
 			RuleFor(x => x.DateOfBirth)
@@ -42,10 +43,6 @@ namespace LibraryManagementSystemAPI.Validators
 
 		private static DateOnly Today() =>
 			DateOnly.FromDateTime(DateTime.UtcNow);
-
-		private static bool BeAValidHttpUrl(string? url) =>
-			Uri.TryCreate(url, UriKind.Absolute, out var uri)
-			&& (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 	}
 
 	public class CreateAuthorRequestValidator : AbstractValidator<CreateAuthorRequest>

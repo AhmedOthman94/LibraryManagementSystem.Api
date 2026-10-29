@@ -8,6 +8,8 @@ namespace LibraryManagementSystemAPI.DataAccess
 	{
 		public DbSet<Category> Categories => Set<Category>();
 		public DbSet<Author> Authors => Set<Author>();
+		public DbSet<Book> Books => Set<Book>();
+		public DbSet<BookAuthor> BookAuthors => Set<BookAuthor>();
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
