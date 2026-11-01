@@ -1,6 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace LibraryManagementSystemAPI.Filters
 {
@@ -31,17 +33,30 @@ namespace LibraryManagementSystemAPI.Filters
 
 				if (!result.IsValid)
 				{
-					context.Result = new BadRequestObjectResult(
-						new ValidationProblemDetails(result.ToDictionary())
-						{
-							Status = StatusCodes.Status400BadRequest
-						}
+					// Put the FluentValidation errors into MVC's ModelState format
+					var modelState = new ModelStateDictionary();
+
+					foreach (var error in result.Errors)
+					{
+						modelState.AddModelError(error.PropertyName, error.ErrorMessage);
+					}
+
+					// Let .NET build the response, so it gets traceId and instance like every other error
+					var problemDetailsFactory = context.HttpContext.RequestServices
+						.GetRequiredService<ProblemDetailsFactory>();
+
+					var problem = problemDetailsFactory.CreateValidationProblemDetails(
+						context.HttpContext,
+						modelState,
+						StatusCodes.Status400BadRequest
 					);
-					return; 
+
+					context.Result = new BadRequestObjectResult(problem);
+					return;
 				}
 			}
 
-			await next(); 
+			await next();
 		}
 	}
 }
