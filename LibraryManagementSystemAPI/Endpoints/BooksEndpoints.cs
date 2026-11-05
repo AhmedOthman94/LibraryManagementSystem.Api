@@ -14,7 +14,8 @@ namespace LibraryManagementSystemAPI.Endpoints
 				.MapGroup("api/books")
 				.WithTags("Books");
 
-			group.MapGet("/", GetAll);
+			group.MapGet("/", GetAll)
+				.WithValidation<BookQueryParameters>();
 
 			group.MapGet("/{id:guid}", GetById)
 				.WithName("GetBookById")
@@ -35,11 +36,12 @@ namespace LibraryManagementSystemAPI.Endpoints
 				.ProducesProblem(StatusCodes.Status404NotFound);
 		}
 
-		private static async Task<Ok<List<BookResponse>>> GetAll(
+		private static async Task<Ok<PagedResponse<BookResponse>>> GetAll(
+			[AsParameters] BookQueryParameters parameters,
 			IBookService bookService,
 			CancellationToken ct)
 		{
-			var books = await bookService.GetAllAsync(ct);
+			var books = await bookService.GetAllAsync(parameters, ct);
 			return TypedResults.Ok(books);
 		}
 

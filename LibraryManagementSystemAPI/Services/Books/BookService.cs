@@ -9,14 +9,21 @@ namespace LibraryManagementSystemAPI.Services.Books
 {
 	public class BookService(LibraryDbContext db) : IBookService
 	{
-		public async Task<List<BookResponse>> GetAllAsync(CancellationToken ct)
+		public async Task<PagedResponse<BookResponse>> GetAllAsync(
+			BookQueryParameters parameters,
+			CancellationToken ct)
 		{
-			var books = await BooksWithDetails()
-				.AsNoTracking()
-				.OrderBy(b => b.Title)
-				.ToListAsync(ct);
+			// Build the plan step by step (no SQL runs yet)
+			var query = BooksWithDetails().AsNoTracking();
 
-			return books.Select(b => b.ToResponse()).ToList();
+			query = ApplyFilters(query, parameters);
+			query = ApplySorting(query, parameters);
+
+			var page = parameters.Page ?? PaginationDefaults.Page;
+			var pageSize = parameters.PageSize ?? PaginationDefaults.PageSize;
+
+			// SQL runs here: one COUNT and one page query
+			return await query.ToPagedResponseAsync(page, pageSize, b => b.ToResponse(), ct);
 		}
 
 		public async Task<Result<BookResponse>> GetByIdAsync(Guid id, CancellationToken ct)
@@ -168,6 +175,72 @@ namespace LibraryManagementSystemAPI.Services.Books
 			}
 
 			return null;
+		}
+
+		private static IQueryable<Book> ApplyFilters(
+	IQueryable<Book> query,
+	BookQueryParameters parameters)
+		{
+			if (!string.IsNullOrWhiteSpace(parameters.Search))
+			{
+				var pattern = LikePattern.Contains(parameters.Search);
+				var isbn = IsbnHelper.Normalize(parameters.Search);
+
+				query = query.Where(b =>
+					EF.Functions.ILike(b.Title, pattern)
+					|| b.Isbn == isbn
+					|| b.BookAuthors.Any(ba =>
+						EF.Functions.ILike(ba.Author.FirstName + " " + ba.Author.LastName, pattern)));
+			}
+
+			if (parameters.CategoryId.HasValue)
+			{
+				query = query.Where(b => b.CategoryId == parameters.CategoryId.Value);
+			}
+
+			if (parameters.AuthorId.HasValue)
+			{
+				query = query.Where(b => b.BookAuthors.Any(ba => ba.AuthorId == parameters.AuthorId.Value));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.Language))
+			{
+				var language = parameters.Language.Trim().ToLower();
+				query = query.Where(b => b.Language != null && b.Language.ToLower() == language);
+			}
+
+			if (parameters.PublishedFrom.HasValue)
+			{
+				query = query.Where(b => b.PublicationYear >= parameters.PublishedFrom.Value);
+			}
+
+			if (parameters.PublishedTo.HasValue)
+			{
+				query = query.Where(b => b.PublicationYear <= parameters.PublishedTo.Value);
+			}
+
+			return query;
+		}
+
+		private static IQueryable<Book> ApplySorting(
+			IQueryable<Book> query,
+			BookQueryParameters parameters)
+		{
+			var descending = string.Equals(
+				parameters.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+			IOrderedQueryable<Book> ordered = (parameters.SortBy?.ToLowerInvariant(), descending) switch
+			{
+				("publicationyear", false) => query.OrderBy(b => b.PublicationYear),
+				("publicationyear", true) => query.OrderByDescending(b => b.PublicationYear),
+				("createdat", false) => query.OrderBy(b => b.CreatedAt),
+				("createdat", true) => query.OrderByDescending(b => b.CreatedAt),
+				(_, false) => query.OrderBy(b => b.Title),          // default: title A → Z
+				(_, true) => query.OrderByDescending(b => b.Title)
+			};
+
+			// Tie-breaker: same order every time, so pages never repeat or skip books
+			return ordered.ThenBy(b => b.Id);
 		}
 	}
 }
