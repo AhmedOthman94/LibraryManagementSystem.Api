@@ -12,5 +12,17 @@ namespace LibraryManagementSystemAPI.Dtos
 
 	public record UserResponse(Guid Id, string Email, UserRole Role, Guid? MemberId);
 
-	public record AuthResponse(string AccessToken, DateTime ExpiresAt, UserResponse User);
+	public record AuthResponse(
+	string AccessToken,
+	DateTime AccessTokenExpiresAt,
+	string RefreshToken,
+	DateTime RefreshTokenExpiresAt,
+	UserResponse User
+);
+
+	public record RefreshTokenRequest(string RefreshToken);
+
+	public record LogoutRequest(string RefreshToken);
+
+	public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 }

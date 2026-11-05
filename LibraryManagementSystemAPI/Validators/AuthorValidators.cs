@@ -60,4 +60,38 @@ namespace LibraryManagementSystemAPI.Validators
 			Include(new AuthorRequestRules());
 		}
 	}
+
+	public class RefreshTokenRequestValidator : AbstractValidator<RefreshTokenRequest>
+	{
+		public RefreshTokenRequestValidator()
+		{
+			RuleFor(x => x.RefreshToken)
+				.NotEmpty().WithMessage("Refresh token is required.")
+				.MaximumLength(200);
+		}
+	}
+
+	public class LogoutRequestValidator : AbstractValidator<LogoutRequest>
+	{
+		public LogoutRequestValidator()
+		{
+			RuleFor(x => x.RefreshToken)
+				.NotEmpty().WithMessage("Refresh token is required.")
+				.MaximumLength(200);
+		}
+	}
+
+	public class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRequest>
+	{
+		public ChangePasswordRequestValidator()
+		{
+			RuleFor(x => x.CurrentPassword)
+				.NotEmpty().WithMessage("Current password is required.")
+				.MaximumLength(128);
+
+			RuleFor(x => x.NewPassword)
+				.ValidPassword()
+				.NotEqual(x => x.CurrentPassword).WithMessage("The new password must be different from the current one.");
+		}
+	}
 }

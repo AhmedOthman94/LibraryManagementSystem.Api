@@ -20,5 +20,13 @@ namespace LibraryManagementSystemAPI.Services.Auth
 
 		public static Error UserNotFound(Guid id) =>
 			Error.NotFound($"User with Id: {id} was not found.");
+
+		// One message for unknown, expired, revoked, or reused tokens
+		public static Error InvalidRefreshToken =>
+			Error.Unauthorized("Your session has expired. Please log in again.");
+
+		// 400, not 401: the access token is fine, the typed password isn't
+		public static Error CurrentPasswordIncorrect =>
+			Error.Validation("The current password is incorrect.");
 	}
 }

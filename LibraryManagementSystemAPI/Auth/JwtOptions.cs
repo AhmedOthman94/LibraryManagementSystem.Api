@@ -18,5 +18,8 @@ namespace LibraryManagementSystemAPI.Auth
 
 		[Range(5, 1440)]
 		public int AccessTokenMinutes { get; set; } = 60;
+
+		[Range(1, 90)]
+		public int RefreshTokenDays { get; set; } = 14;
 	}
 }

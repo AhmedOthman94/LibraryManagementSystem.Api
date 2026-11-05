@@ -9,5 +9,7 @@ namespace LibraryManagementSystemAPI.Services.Authors
 
 		public static Error HasBooks =>
 			Error.Conflict("This author still has books. Remove the author from them first.");
+
+		
 	}
 }

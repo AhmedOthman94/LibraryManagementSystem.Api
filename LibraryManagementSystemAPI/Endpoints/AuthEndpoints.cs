@@ -12,11 +12,12 @@ namespace LibraryManagementSystemAPI.Endpoints
 	{
 		public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
 		{
-			// Public: you can't be logged in before logging in
+			// Public, and rate-limited per IP: login, register, refresh, logout
 			var auth = app
 				.MapGroup("api/auth")
 				.WithTags("Auth")
-				.AllowAnonymous();
+				.AllowAnonymous()
+				.RequireRateLimiting(AuthRateLimiting.PolicyName);
 
 			auth.MapPost("/login", Login)
 				.WithValidation<LoginRequest>()
@@ -26,17 +27,16 @@ namespace LibraryManagementSystemAPI.Endpoints
 				.WithValidation<RegisterMemberAccountRequest>()
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
-			// Any logged-in user (the fallback policy applies)
-			var me = app
-				.MapGroup("api/me")
-				.WithTags("Me");
+			auth.MapPost("/refresh", Refresh)
+				.WithValidation<RefreshTokenRequest>()
+				.ProducesProblem(StatusCodes.Status401Unauthorized);
 
-			me.MapGet("/", GetMe);
+			auth.MapPost("/logout", Logout)
+				.WithValidation<LogoutRequest>();
 
-			me.MapGet("/loans", GetMyLoans)
-				.RequireAuthorization(AuthPolicies.Member)
-				.WithValidation<LoanQueryParameters>();
+			
 
+			
 			// Admin only
 			var users = app
 				.MapGroup("api/users")
@@ -123,6 +123,66 @@ namespace LibraryManagementSystemAPI.Endpoints
 			CancellationToken ct)
 		{
 			var result = await authService.CreateStaffUserAsync(request, ct);
+
+			if (result.IsFailure)
+			{
+				return result.Error.ToProblem();
+			}
+
+			return TypedResults.Ok(result.Value);
+		}
+
+		private static async Task<Results<Ok<AuthResponse>, ProblemHttpResult>> Refresh(
+	RefreshTokenRequest request,
+	IAuthService authService,
+	CancellationToken ct)
+		{
+			var result = await authService.RefreshAsync(request, ct);
+
+			if (result.IsFailure)
+			{
+				return result.Error.ToProblem();
+			}
+
+			return TypedResults.Ok(result.Value);
+		}
+
+		private static async Task<NoContent> Logout(
+			LogoutRequest request,
+			IAuthService authService,
+			CancellationToken ct)
+		{
+			// Always 204: logging out twice, or with an unknown token, is harmless
+			await authService.LogoutAsync(request, ct);
+			return TypedResults.NoContent();
+		}
+
+		private static async Task<Results<NoContent, ProblemHttpResult>> LogoutAll(
+			ICurrentUser currentUser,
+			IAuthService authService,
+			CancellationToken ct)
+		{
+			if (currentUser.UserId is not Guid userId)
+			{
+				return TypedResults.Problem(statusCode: StatusCodes.Status401Unauthorized);
+			}
+
+			await authService.LogoutAllAsync(userId, ct);
+			return TypedResults.NoContent();
+		}
+
+		private static async Task<Results<Ok<AuthResponse>, ProblemHttpResult>> ChangePassword(
+			ChangePasswordRequest request,
+			ICurrentUser currentUser,
+			IAuthService authService,
+			CancellationToken ct)
+		{
+			if (currentUser.UserId is not Guid userId)
+			{
+				return TypedResults.Problem(statusCode: StatusCodes.Status401Unauthorized);
+			}
+
+			var result = await authService.ChangePasswordAsync(userId, request, ct);
 
 			if (result.IsFailure)
 			{

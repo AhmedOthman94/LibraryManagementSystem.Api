@@ -81,7 +81,9 @@ builder.Services.AddScoped<IBookCopyService, BookCopyService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<ILoanService, LoanService>();
 
+
 builder.Services.AddLibraryAuth(builder.Configuration);
+builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
@@ -110,6 +112,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();   // read the token → fill HttpContext.User
 app.UseAuthorization();  // check policies for the endpoint
+
+app.UseRateLimiter();
 
 app.MapCategoryEndpoints();
 app.MapBookEndpoints();
