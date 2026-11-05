@@ -14,7 +14,8 @@ namespace LibraryManagementSystemAPI.ErrorHandling
 		{
 			["IX_Books_Isbn"] = "A book with this ISBN already exists.",
 			["IX_Categories_Name"] = "A category with this name already exists.",
-			["IX_BookCopies_Barcode"] = "A copy with this barcode already exists."
+			["IX_BookCopies_Barcode"] = "A copy with this barcode already exists.",
+			["IX_Members_Email"] = "A member with this email already exists."
 		};
 
 		public async ValueTask<bool> TryHandleAsync(

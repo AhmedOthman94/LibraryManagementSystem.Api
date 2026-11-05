@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using FluentValidation;
+using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.DataAccess;
 using LibraryManagementSystemAPI.Endpoints;
 using LibraryManagementSystemAPI.ErrorHandling;
@@ -8,6 +9,7 @@ using LibraryManagementSystemAPI.Services.Authors;
 using LibraryManagementSystemAPI.Services.BookCopies;
 using LibraryManagementSystemAPI.Services.Books;
 using LibraryManagementSystemAPI.Services.Categories;
+using LibraryManagementSystemAPI.Services.Members;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -58,11 +60,22 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 	options.UseNpgsql(builder.Configuration.GetConnectionString("LibraryDb"));
 });
 
+// Business settings from appsettings.json, checked when the app starts
+builder.Services
+	.AddOptions<LibraryPolicyOptions>()
+	.Bind(builder.Configuration.GetSection(LibraryPolicyOptions.SectionName))
+	.ValidateDataAnnotations()
+	.ValidateOnStart();
+
+// The real clock (tests will replace it with a fake one)
+builder.Services.AddSingleton(TimeProvider.System);
+
 // Scoped = one instance per HTTP request, same lifetime as LibraryDbContext
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<IBookCopyService, BookCopyService>();
+builder.Services.AddScoped<IMemberService, MemberService>();
 
 var app = builder.Build();
 
@@ -91,6 +104,7 @@ app.UseHttpsRedirection();
 app.MapCategoryEndpoints();
 app.MapBookEndpoints();
 app.MapBookCopyEndpoints();
+app.MapMemberEndpoints();
 app.MapControllers();
 
 app.Run();

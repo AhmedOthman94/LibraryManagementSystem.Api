@@ -11,10 +11,16 @@ namespace LibraryManagementSystemAPI.DataAccess
 		public DbSet<Book> Books => Set<Book>();
 		public DbSet<BookAuthor> BookAuthors => Set<BookAuthor>();
 		public DbSet<BookCopy> BookCopies => Set<BookCopy>();
+		public DbSet<Member> Members => Set<Member>();
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);
+
+			// A database counter for membership card numbers
+			modelBuilder.HasSequence<int>("MembershipNumbers")
+				.StartsAt(1)
+				.IncrementsBy(1);
 
 			// Finds every IEntityTypeConfiguration class in this project
 			// (CategoryConfiguration, AuthorConfiguration, ...) and applies it.
