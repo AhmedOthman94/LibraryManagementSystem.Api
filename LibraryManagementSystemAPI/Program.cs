@@ -3,6 +3,8 @@ using LibraryManagementSystemAPI.DataAccess;
 using LibraryManagementSystemAPI.Endpoints;
 using LibraryManagementSystemAPI.ErrorHandling;
 using LibraryManagementSystemAPI.Filters;
+using LibraryManagementSystemAPI.Services.Authors;
+using LibraryManagementSystemAPI.Services.Categories;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -42,6 +44,10 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 {
 	options.UseNpgsql(builder.Configuration.GetConnectionString("LibraryDb"));
 });
+
+// Scoped = one instance per HTTP request, same lifetime as LibraryDbContext
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IAuthorService, AuthorService>();
 
 var app = builder.Build();
 

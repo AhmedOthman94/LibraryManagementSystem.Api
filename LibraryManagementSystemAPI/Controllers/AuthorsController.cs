@@ -1,28 +1,19 @@
-﻿using LibraryManagementSystemAPI.DataAccess;
+﻿using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.Dtos;
-using LibraryManagementSystemAPI.Mappings;
+using LibraryManagementSystemAPI.Services.Authors;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystemAPI.Controllers
 {
 	[ApiController]
 	[Route("api/authors")]
-	public class AuthorsController(
-							LibraryDbContext db) 
-	: ControllerBase
+	public class AuthorsController(IAuthorService authorService) : ControllerBase
 	{
 		[HttpGet]
 		[ProducesResponseType(typeof(IEnumerable<AuthorResponse>), StatusCodes.Status200OK)]
 		public async Task<ActionResult<IEnumerable<AuthorResponse>>> GetAll(CancellationToken ct)
 		{
-			var authors = await db.Authors
-				.AsNoTracking()
-				.OrderBy(a => a.LastName)
-				.ThenBy(a => a.FirstName)
-				.Select(a => a.ToResponse())
-				.ToListAsync(ct);
-
+			var authors = await authorService.GetAllAsync(ct);
 			return Ok(authors);
 		}
 
@@ -31,19 +22,14 @@ namespace LibraryManagementSystemAPI.Controllers
 		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
 		public async Task<ActionResult<AuthorResponse>> GetById(Guid id, CancellationToken ct)
 		{
-			var author = await db.Authors
-				.AsNoTracking()
-				.FirstOrDefaultAsync(a => a.Id == id, ct);
+			var result = await authorService.GetByIdAsync(id, ct);
 
-			if (author is null)
+			if (result.IsFailure)
 			{
-				return Problem(
-					detail: $"Author with Id: {id} was not found.",
-					statusCode: StatusCodes.Status404NotFound
-				);
+				return this.ToProblem(result.Error);
 			}
 
-			return Ok(author.ToResponse());
+			return Ok(result.Value);
 		}
 
 		[HttpPost]
@@ -53,16 +39,9 @@ namespace LibraryManagementSystemAPI.Controllers
 			CreateAuthorRequest request,
 			CancellationToken ct)
 		{
-			var author = request.ToEntity();
+			var author = await authorService.CreateAsync(request, ct);
 
-			db.Authors.Add(author);
-			await db.SaveChangesAsync(ct);
-
-			return CreatedAtAction(
-				nameof(GetById),
-				new { id = author.Id },
-				author.ToResponse()
-			);
+			return CreatedAtAction(nameof(GetById), new { id = author.Id }, author);
 		}
 
 		[HttpPut("{id:guid}")]
@@ -74,21 +53,14 @@ namespace LibraryManagementSystemAPI.Controllers
 			UpdateAuthorRequest request,
 			CancellationToken ct)
 		{
-			var author = await db.Authors
-				.FirstOrDefaultAsync(a => a.Id == id, ct);
+			var result = await authorService.UpdateAsync(id, request, ct);
 
-			if (author is null)
+			if (result.IsFailure)
 			{
-				return Problem(
-					detail: $"Author with Id: {id} was not found.",
-					statusCode: StatusCodes.Status404NotFound
-				);
+				return this.ToProblem(result.Error);
 			}
 
-			request.ApplyTo(author);
-			await db.SaveChangesAsync(ct);
-
-			return Ok(author.ToResponse());
+			return Ok(result.Value);
 		}
 
 		[HttpDelete("{id:guid}")]
@@ -97,29 +69,12 @@ namespace LibraryManagementSystemAPI.Controllers
 		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
 		public async Task<ActionResult> Delete(Guid id, CancellationToken ct)
 		{
-			var author = await db.Authors
-				.FirstOrDefaultAsync(a => a.Id == id, ct);
+			var result = await authorService.DeleteAsync(id, ct);
 
-			if (author is null)
+			if (result.IsFailure)
 			{
-				return Problem(
-					detail: $"Author with Id: {id} was not found.",
-					statusCode: StatusCodes.Status404NotFound
-				);
+				return this.ToProblem(result.Error);
 			}
-
-			var hasBooks = await db.BookAuthors.AnyAsync(ba => ba.AuthorId == id, ct);
-
-			if (hasBooks)
-			{
-				return Problem(
-					detail: "This author still has books. Remove the author from them first.",
-					statusCode: StatusCodes.Status409Conflict
-				);
-			}
-
-			db.Authors.Remove(author);
-			await db.SaveChangesAsync(ct);
 
 			return NoContent();
 		}
