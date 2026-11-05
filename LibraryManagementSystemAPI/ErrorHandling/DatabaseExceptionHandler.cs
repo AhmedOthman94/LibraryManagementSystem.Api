@@ -5,8 +5,6 @@ using Npgsql;
 
 namespace LibraryManagementSystemAPI.ErrorHandling
 {
-	// Handles database rule violations (unique, foreign key, check, length).
-	// Anything else: says "not mine" and lets the next handler try.
 	public class DatabaseExceptionHandler(
 		IProblemDetailsService problemDetailsService,
 		IHostEnvironment environment,
@@ -27,7 +25,6 @@ namespace LibraryManagementSystemAPI.ErrorHandling
 			{
 				return false;
 			}
-
 
 			var (statusCode, detail) = postgresError.SqlState switch
 			{
