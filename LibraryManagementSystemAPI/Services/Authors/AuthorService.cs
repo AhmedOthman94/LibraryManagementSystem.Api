@@ -8,16 +8,34 @@ namespace LibraryManagementSystemAPI.Services.Authors
 {
 	public class AuthorService(LibraryDbContext db) : IAuthorService
 	{
-		public async Task<List<AuthorResponse>> GetAllAsync(CancellationToken ct)
+		public async Task<PagedResponse<AuthorResponse>> GetAllAsync(
+			AuthorQueryParameters parameters,
+			CancellationToken ct)
 		{
-			return await db.Authors
-				.AsNoTracking()
+			var query = db.Authors.AsNoTracking();
+
+			if (!string.IsNullOrWhiteSpace(parameters.Search))
+			{
+				var pattern = LikePattern.Contains(parameters.Search);
+				query = query.Where(a => EF.Functions.ILike(a.FirstName + " " + a.LastName, pattern));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.Nationality))
+			{
+				var nationality = parameters.Nationality.Trim().ToLower();
+				query = query.Where(a => a.Nationality != null && a.Nationality.ToLower() == nationality);
+			}
+
+			query = query
 				.OrderBy(a => a.LastName)
 				.ThenBy(a => a.FirstName)
-				.Select(a => a.ToResponse())
-				.ToListAsync(ct);
-		}
+				.ThenBy(a => a.Id); // tie-breaker
 
+			var page = parameters.Page ?? PaginationDefaults.Page;
+			var pageSize = parameters.PageSize ?? PaginationDefaults.PageSize;
+
+			return await query.ToPagedResponseAsync(page, pageSize, a => a.ToResponse(), ct);
+		}
 		public async Task<Result<AuthorResponse>> GetByIdAsync(Guid id, CancellationToken ct)
 		{
 			var author = await db.Authors

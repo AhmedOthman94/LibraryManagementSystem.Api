@@ -10,10 +10,13 @@ namespace LibraryManagementSystemAPI.Controllers
 	public class AuthorsController(IAuthorService authorService) : ControllerBase
 	{
 		[HttpGet]
-		[ProducesResponseType(typeof(IEnumerable<AuthorResponse>), StatusCodes.Status200OK)]
-		public async Task<ActionResult<IEnumerable<AuthorResponse>>> GetAll(CancellationToken ct)
+		[ProducesResponseType(typeof(PagedResponse<AuthorResponse>), StatusCodes.Status200OK)]
+		[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+		public async Task<ActionResult<PagedResponse<AuthorResponse>>> GetAll(
+				[FromQuery] AuthorQueryParameters parameters,
+				CancellationToken ct)
 		{
-			var authors = await authorService.GetAllAsync(ct);
+			var authors = await authorService.GetAllAsync(parameters, ct);
 			return Ok(authors);
 		}
 
