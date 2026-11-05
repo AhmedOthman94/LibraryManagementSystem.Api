@@ -1,4 +1,5 @@
-﻿using LibraryManagementSystemAPI.Common;
+﻿using LibraryManagementSystemAPI.Auth;
+using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.Dtos;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.Books;
@@ -12,13 +13,16 @@ namespace LibraryManagementSystemAPI.Endpoints
 		{
 			var group = app
 				.MapGroup("api/books")
-				.WithTags("Books");
+				.WithTags("Books")
+				.RequireAuthorization(AuthPolicies.Staff);
 
 			group.MapGet("/", GetAll)
+				.AllowAnonymous()
 				.WithValidation<BookQueryParameters>();
 
 			group.MapGet("/{id:guid}", GetById)
 				.WithName("GetBookById")
+				.AllowAnonymous()
 				.ProducesProblem(StatusCodes.Status404NotFound);
 
 			group.MapPost("/", Create)

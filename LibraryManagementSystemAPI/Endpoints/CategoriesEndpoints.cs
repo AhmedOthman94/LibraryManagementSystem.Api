@@ -1,4 +1,5 @@
-﻿using LibraryManagementSystemAPI.Common;
+﻿using LibraryManagementSystemAPI.Auth;
+using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.Dtos;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.Categories;
@@ -12,12 +13,15 @@ namespace LibraryManagementSystemAPI.Endpoints
 		{
 			var group = app
 				.MapGroup("api/categories")
-				.WithTags("Categories");
+				.WithTags("Categories")
+				.RequireAuthorization(AuthPolicies.Staff);   // writing = staff only
 
-			group.MapGet("/", GetAll);
+			group.MapGet("/", GetAll)
+				.AllowAnonymous();                           // the catalog is public
 
 			group.MapGet("/{id:guid}", GetById)
 				.WithName("GetCategoryById")
+				.AllowAnonymous()
 				.ProducesProblem(StatusCodes.Status404NotFound);
 
 			group.MapPost("/", Create)

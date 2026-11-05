@@ -54,11 +54,18 @@ namespace LibraryManagementSystemAPI.Services.Loans
 			return await query.ToPagedResponseAsync(page, pageSize, l => l.ToResponse(today, _policy), ct);
 		}
 
-		public async Task<Result<LoanResponse>> GetByIdAsync(Guid id, CancellationToken ct)
+		public async Task<Result<LoanResponse>> GetByIdAsync(
+			Guid id,
+			Guid? restrictToMemberId,
+			CancellationToken ct)
 		{
+			// restrictToMemberId = null → staff, any loan
+			// restrictToMemberId = X    → only if this loan belongs to member X
 			var loan = await LoansWithDetails()
 				.AsNoTracking()
-				.FirstOrDefaultAsync(l => l.Id == id, ct);
+				.FirstOrDefaultAsync(
+					l => l.Id == id && (restrictToMemberId == null || l.MemberId == restrictToMemberId),
+					ct);
 
 			if (loan is null)
 			{
@@ -189,11 +196,18 @@ namespace LibraryManagementSystemAPI.Services.Loans
 			return await GetResponseAsync(id, today, ct);
 		}
 
-		public async Task<Result<LoanResponse>> RenewAsync(Guid id, CancellationToken ct)
+		public async Task<Result<LoanResponse>> RenewAsync(
+				Guid id,
+				Guid? restrictToMemberId,
+				CancellationToken ct)
 		{
 			var loan = await db.Loans
 				.Include(l => l.Member)
-				.FirstOrDefaultAsync(l => l.Id == id, ct);
+				.FirstOrDefaultAsync(
+					l => l.Id == id && (restrictToMemberId == null || l.MemberId == restrictToMemberId),
+					ct);
+
+			
 
 			if (loan is null)
 			{

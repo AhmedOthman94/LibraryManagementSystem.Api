@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
 using FluentValidation;
+using LibraryManagementSystemAPI.Auth;
 using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.DataAccess;
 using LibraryManagementSystemAPI.Endpoints;
 using LibraryManagementSystemAPI.ErrorHandling;
 using LibraryManagementSystemAPI.Filters;
+using LibraryManagementSystemAPI.Services.Auth;
 using LibraryManagementSystemAPI.Services.Authors;
 using LibraryManagementSystemAPI.Services.BookCopies;
 using LibraryManagementSystemAPI.Services.Books;
@@ -79,6 +81,9 @@ builder.Services.AddScoped<IBookCopyService, BookCopyService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<ILoanService, LoanService>();
 
+builder.Services.AddLibraryAuth(builder.Configuration);
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 var app = builder.Build();
 
 // ---------- Pipeline (the "doors") ----------
@@ -91,8 +96,8 @@ app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
-	app.MapOpenApi();
-	app.MapScalarApiReference();
+	app.MapOpenApi().AllowAnonymous();
+	app.MapScalarApiReference().AllowAnonymous();
 
 	// TEMPORARY: only for testing the global handler. Delete after testing!
 	app.MapGet("/api/debug/throw", () =>
@@ -103,11 +108,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();   // read the token → fill HttpContext.User
+app.UseAuthorization();  // check policies for the endpoint
+
 app.MapCategoryEndpoints();
 app.MapBookEndpoints();
 app.MapBookCopyEndpoints();
 app.MapMemberEndpoints();
 app.MapLoanEndpoints();
+app.MapAuthEndpoints();
 app.MapControllers();
+
+await app.SeedBootstrapAdminAsync();
 
 app.Run();

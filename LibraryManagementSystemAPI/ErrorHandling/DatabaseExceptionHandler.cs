@@ -16,7 +16,9 @@ namespace LibraryManagementSystemAPI.ErrorHandling
 			["IX_Categories_Name"] = "A category with this name already exists.",
 			["IX_BookCopies_Barcode"] = "A copy with this barcode already exists.",
 			["IX_Members_Email"] = "A member with this email already exists.",
-			["IX_Loans_OneActiveLoanPerCopy"] = "This copy is already on loan to someone else."
+			["IX_Loans_OneActiveLoanPerCopy"] = "This copy is already on loan to someone else.",
+			["IX_Users_Email"] = "An account with this email already exists.",
+			["IX_Users_MemberId"] = "This member already has an online account."
 		};
 
 		public async ValueTask<bool> TryHandleAsync(

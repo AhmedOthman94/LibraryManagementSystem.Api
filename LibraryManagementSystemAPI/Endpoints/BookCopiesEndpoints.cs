@@ -1,4 +1,5 @@
-﻿using LibraryManagementSystemAPI.Common;
+﻿using LibraryManagementSystemAPI.Auth;
+using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.Dtos;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.BookCopies;
@@ -13,7 +14,8 @@ namespace LibraryManagementSystemAPI.Endpoints
 			// Nested route: copies always belong to a book
 			var group = app
 				.MapGroup("api/books/{bookId:guid}/copies")
-				.WithTags("Book Copies");
+				.WithTags("Book Copies")
+				.RequireAuthorization(AuthPolicies.Staff);
 
 			group.MapGet("/", GetAll)
 				.ProducesProblem(StatusCodes.Status404NotFound);

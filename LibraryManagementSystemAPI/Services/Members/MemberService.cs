@@ -208,6 +208,13 @@ namespace LibraryManagementSystemAPI.Services.Members
 			{
 				return MemberErrors.HasActiveLoans;
 			}
+			// The member's login account goes with them (same SaveChanges = same transaction)
+			var account = await db.Users.FirstOrDefaultAsync(u => u.MemberId == id, ct);
+
+			if (account is not null)
+			{
+				db.Users.Remove(account);
+			}
 
 			db.Members.Remove(member); // becomes a soft delete
 			await db.SaveChangesAsync(ct);

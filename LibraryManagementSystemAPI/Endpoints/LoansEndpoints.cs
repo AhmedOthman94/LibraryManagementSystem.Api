@@ -1,4 +1,5 @@
-﻿using LibraryManagementSystemAPI.Common;
+﻿using LibraryManagementSystemAPI.Auth;
+using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.Dtos;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.Loans;
@@ -10,30 +11,34 @@ namespace LibraryManagementSystemAPI.Endpoints
 	{
 		public static void MapLoanEndpoints(this IEndpointRouteBuilder app)
 		{
+			// No group rule: the fallback policy already requires a logged-in user
 			var group = app
 				.MapGroup("api/loans")
 				.WithTags("Loans");
 
 			group.MapGet("/", GetAll)
+				.RequireAuthorization(AuthPolicies.Staff)
 				.WithValidation<LoanQueryParameters>();
 
+			// Staff: any loan. Member: only their own (others look like 404)
 			group.MapGet("/{id:guid}", GetById)
 				.WithName("GetLoanById")
 				.ProducesProblem(StatusCodes.Status404NotFound);
 
 			group.MapPost("/", Borrow)
+				.RequireAuthorization(AuthPolicies.Staff)
 				.WithValidation<BorrowBookRequest>()
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
 			group.MapPost("/{id:guid}/return", ReturnBook)
+				.RequireAuthorization(AuthPolicies.Staff)
 				.ProducesProblem(StatusCodes.Status404NotFound)
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
+			// Staff, or a member renewing their own loan online
 			group.MapPost("/{id:guid}/renew", Renew)
 				.ProducesProblem(StatusCodes.Status404NotFound)
 				.ProducesProblem(StatusCodes.Status409Conflict);
-
-			// No PUT and no DELETE: loans are history
 		}
 
 		private static async Task<Ok<PagedResponse<LoanResponse>>> GetAll(
@@ -46,11 +51,12 @@ namespace LibraryManagementSystemAPI.Endpoints
 		}
 
 		private static async Task<Results<Ok<LoanResponse>, ProblemHttpResult>> GetById(
-			Guid id,
-			ILoanService loanService,
-			CancellationToken ct)
+	Guid id,
+	ICurrentUser currentUser,
+	ILoanService loanService,
+	CancellationToken ct)
 		{
-			var result = await loanService.GetByIdAsync(id, ct);
+			var result = await loanService.GetByIdAsync(id, OwnLoansOnly(currentUser), ct);
 
 			if (result.IsFailure)
 			{
@@ -59,6 +65,27 @@ namespace LibraryManagementSystemAPI.Endpoints
 
 			return TypedResults.Ok(result.Value);
 		}
+
+		private static async Task<Results<Ok<LoanResponse>, ProblemHttpResult>> Renew(
+			Guid id,
+			ICurrentUser currentUser,
+			ILoanService loanService,
+			CancellationToken ct)
+		{
+			var result = await loanService.RenewAsync(id, OwnLoansOnly(currentUser), ct);
+
+			if (result.IsFailure)
+			{
+				return result.Error.ToProblem();
+			}
+
+			return TypedResults.Ok(result.Value);
+		}
+
+		// Staff → null (no restriction).
+		// Anyone else → their member id, or Guid.Empty (matches nothing) if they have none.
+		private static Guid? OwnLoansOnly(ICurrentUser currentUser) =>
+			currentUser.IsStaff ? null : currentUser.MemberId ?? Guid.Empty;
 
 		private static async Task<Results<CreatedAtRoute<LoanResponse>, ProblemHttpResult>> Borrow(
 			BorrowBookRequest request,
@@ -95,19 +122,6 @@ namespace LibraryManagementSystemAPI.Endpoints
 			return TypedResults.Ok(result.Value);
 		}
 
-		private static async Task<Results<Ok<LoanResponse>, ProblemHttpResult>> Renew(
-			Guid id,
-			ILoanService loanService,
-			CancellationToken ct)
-		{
-			var result = await loanService.RenewAsync(id, ct);
-
-			if (result.IsFailure)
-			{
-				return result.Error.ToProblem();
-			}
-
-			return TypedResults.Ok(result.Value);
-		}
+		
 	}
 }

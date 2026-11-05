@@ -14,6 +14,7 @@ namespace LibraryManagementSystemAPI.DataAccess
 		public DbSet<Member> Members => Set<Member>();
 
 		public DbSet<Loan> Loans => Set<Loan>();
+		public DbSet<User> Users => Set<User>();
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{

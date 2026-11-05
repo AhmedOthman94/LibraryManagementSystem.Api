@@ -1,4 +1,5 @@
-﻿using LibraryManagementSystemAPI.Common;
+﻿using LibraryManagementSystemAPI.Auth;
+using LibraryManagementSystemAPI.Common;
 using LibraryManagementSystemAPI.Dtos;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.Members;
@@ -12,7 +13,8 @@ namespace LibraryManagementSystemAPI.Endpoints
 		{
 			var group = app
 				.MapGroup("api/members")
-				.WithTags("Members");
+				.WithTags("Members")
+				.RequireAuthorization(AuthPolicies.Staff);
 
 			group.MapGet("/", GetAll)
 				.WithValidation<MemberQueryParameters>();
