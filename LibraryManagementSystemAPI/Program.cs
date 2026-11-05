@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
 using FluentValidation;
 using LibraryManagementSystemAPI.DataAccess;
 using LibraryManagementSystemAPI.Endpoints;
 using LibraryManagementSystemAPI.ErrorHandling;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.Authors;
+using LibraryManagementSystemAPI.Services.BookCopies;
 using LibraryManagementSystemAPI.Services.Books;
 using LibraryManagementSystemAPI.Services.Categories;
 using Microsoft.EntityFrameworkCore;
@@ -18,8 +20,18 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers(options =>
 {
 	options.Filters.Add<FluentValidationActionFilter>();
+})
+.AddJsonOptions(options =>
+{
+	// Controllers: enums as "Available" instead of 0
+	options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
+// Minimal APIs: enums as "Available" instead of 0
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+	options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Every ProblemDetails in the API gets "instance" and "traceId"
@@ -50,6 +62,7 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IBookService, BookService>();
+builder.Services.AddScoped<IBookCopyService, BookCopyService>();
 
 var app = builder.Build();
 
@@ -77,6 +90,7 @@ app.UseHttpsRedirection();
 
 app.MapCategoryEndpoints();
 app.MapBookEndpoints();
+app.MapBookCopyEndpoints();
 app.MapControllers();
 
 app.Run();

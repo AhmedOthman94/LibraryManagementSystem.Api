@@ -56,6 +56,8 @@
 		string? CoverImageUrl,
 		CategorySummary Category,
 		List<AuthorSummary> Authors,
+		int TotalCopies,
+		int AvailableCopies,
 		DateTime CreatedAt,
 		DateTime? UpdatedAt
 	);

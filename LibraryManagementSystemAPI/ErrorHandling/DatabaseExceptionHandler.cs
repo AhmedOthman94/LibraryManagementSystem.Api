@@ -13,7 +13,8 @@ namespace LibraryManagementSystemAPI.ErrorHandling
 		private static readonly Dictionary<string, string> FriendlyMessages = new()
 		{
 			["IX_Books_Isbn"] = "A book with this ISBN already exists.",
-			["IX_Categories_Name"] = "A category with this name already exists."
+			["IX_Categories_Name"] = "A category with this name already exists.",
+			["IX_BookCopies_Barcode"] = "A copy with this barcode already exists."
 		};
 
 		public async ValueTask<bool> TryHandleAsync(

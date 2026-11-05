@@ -25,6 +25,8 @@ namespace LibraryManagementSystemAPI.Mappings
 						ba.Author.Id,
 						$"{ba.Author.FirstName} {ba.Author.LastName}"))
 					.ToList(),
+				book.Copies.Count,
+				book.Copies.Count(c => c.Status == CopyStatus.Available),
 				book.CreatedAt,
 				book.UpdatedAt
 			);

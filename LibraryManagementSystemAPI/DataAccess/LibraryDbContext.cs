@@ -10,6 +10,7 @@ namespace LibraryManagementSystemAPI.DataAccess
 		public DbSet<Author> Authors => Set<Author>();
 		public DbSet<Book> Books => Set<Book>();
 		public DbSet<BookAuthor> BookAuthors => Set<BookAuthor>();
+		public DbSet<BookCopy> BookCopies => Set<BookCopy>();
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{

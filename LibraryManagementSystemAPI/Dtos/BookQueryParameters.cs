@@ -12,7 +12,7 @@
 		public string? Language { get; set; }
 		public int? PublishedFrom { get; set; }
 		public int? PublishedTo { get; set; }
-
+		public bool? AvailableOnly { get; set; }
 		public string? SortBy { get; set; }
 		public string? SortDirection { get; set; }
 

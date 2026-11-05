@@ -117,6 +117,11 @@ namespace LibraryManagementSystemAPI.Services.Books
 				return BookErrors.NotFound(id);
 			}
 
+			if (await db.BookCopies.AnyAsync(c => c.BookId == id, ct))
+			{
+				return BookErrors.HasCopies;
+			}
+
 			db.Books.Remove(book); // becomes a soft delete
 			await db.SaveChangesAsync(ct);
 
@@ -127,9 +132,11 @@ namespace LibraryManagementSystemAPI.Services.Books
 		// "A book with everything the response needs"
 		private IQueryable<Book> BooksWithDetails() =>
 			db.Books
-				.Include(b => b.Category)
-				.Include(b => b.BookAuthors)
-					.ThenInclude(ba => ba.Author);
+			.Include(b => b.Category)
+			.Include(b => b.BookAuthors)
+				.ThenInclude(ba => ba.Author)
+			.Include(b => b.Copies)
+			.AsSplitQuery(); // avoid row explosion: one SQL query per collection
 
 		// Reload a saved book with its category and authors, as a response
 		private async Task<BookResponse> GetResponseAsync(Guid id, CancellationToken ct)
@@ -178,8 +185,8 @@ namespace LibraryManagementSystemAPI.Services.Books
 		}
 
 		private static IQueryable<Book> ApplyFilters(
-	IQueryable<Book> query,
-	BookQueryParameters parameters)
+			IQueryable<Book> query,
+			BookQueryParameters parameters)
 		{
 			if (!string.IsNullOrWhiteSpace(parameters.Search))
 			{
@@ -217,6 +224,11 @@ namespace LibraryManagementSystemAPI.Services.Books
 			if (parameters.PublishedTo.HasValue)
 			{
 				query = query.Where(b => b.PublicationYear <= parameters.PublishedTo.Value);
+			}
+
+			if (parameters.AvailableOnly == true)
+			{
+				query = query.Where(b => b.Copies.Any(c => c.Status == CopyStatus.Available));
 			}
 
 			return query;

@@ -15,5 +15,8 @@ namespace LibraryManagementSystemAPI.Services.Books
 
 		public static Error AuthorsDoNotExist(IEnumerable<Guid> authorIds) =>
 			Error.Validation($"These authors do not exist: {string.Join(", ", authorIds)}");
+
+		public static Error HasCopies =>
+			Error.Conflict("This book still has copies. Delete its copies first.");
 	}
 }

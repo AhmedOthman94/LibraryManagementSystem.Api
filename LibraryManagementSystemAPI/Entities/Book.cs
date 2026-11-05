@@ -17,5 +17,6 @@
 
 		// Many-to-many: a book has one or more authors
 		public ICollection<BookAuthor> BookAuthors { get; set; } = [];
+		public ICollection<BookCopy> Copies { get; set; } = [];
 	}
 }
