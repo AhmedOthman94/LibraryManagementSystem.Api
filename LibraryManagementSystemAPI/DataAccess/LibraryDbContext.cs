@@ -13,6 +13,8 @@ namespace LibraryManagementSystemAPI.DataAccess
 		public DbSet<BookCopy> BookCopies => Set<BookCopy>();
 		public DbSet<Member> Members => Set<Member>();
 
+		public DbSet<Loan> Loans => Set<Loan>();
+
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);

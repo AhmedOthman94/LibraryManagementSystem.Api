@@ -18,5 +18,8 @@ namespace LibraryManagementSystemAPI.Services.Members
 
 		public static Error SuspendedCannotRenew =>
 			Error.Conflict("A suspended member can't renew. Reactivate the member first.");
+
+		public static Error HasActiveLoans =>
+			Error.Conflict("This member still has books on loan. They must be returned first.");
 	}
 }

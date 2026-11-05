@@ -204,7 +204,10 @@ namespace LibraryManagementSystemAPI.Services.Members
 				return MemberErrors.NotFound(id);
 			}
 
-			// In the Loans step: block this if the member still has books
+			if (await db.Loans.AnyAsync(l => l.MemberId == id && l.ReturnedOn == null, ct))
+			{
+				return MemberErrors.HasActiveLoans;
+			}
 
 			db.Members.Remove(member); // becomes a soft delete
 			await db.SaveChangesAsync(ct);

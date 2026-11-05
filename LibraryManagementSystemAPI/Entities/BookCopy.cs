@@ -11,5 +11,8 @@
 
 		public string? ShelfLocation { get; set; }
 		public DateOnly? AcquiredOn { get; set; }
+		// Concurrency token: PostgreSQL's hidden "xmin" column, which changes on every update
+		public uint Version { get; set; }
 	}
+
 }

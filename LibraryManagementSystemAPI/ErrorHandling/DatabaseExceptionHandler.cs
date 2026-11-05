@@ -15,7 +15,8 @@ namespace LibraryManagementSystemAPI.ErrorHandling
 			["IX_Books_Isbn"] = "A book with this ISBN already exists.",
 			["IX_Categories_Name"] = "A category with this name already exists.",
 			["IX_BookCopies_Barcode"] = "A copy with this barcode already exists.",
-			["IX_Members_Email"] = "A member with this email already exists."
+			["IX_Members_Email"] = "A member with this email already exists.",
+			["IX_Loans_OneActiveLoanPerCopy"] = "This copy is already on loan to someone else."
 		};
 
 		public async ValueTask<bool> TryHandleAsync(
@@ -23,6 +24,23 @@ namespace LibraryManagementSystemAPI.ErrorHandling
 			Exception exception,
 			CancellationToken cancellationToken)
 		{
+			// Optimistic concurrency: someone changed the same row between our read and our save
+			if (exception is DbUpdateConcurrencyException)
+			{
+				logger.LogWarning(
+					exception,
+					"Concurrency conflict. TraceId: {TraceId}",
+					ErrorHandlingHelpers.GetTraceId(httpContext));
+
+				var conflictProblem = new ProblemDetails
+				{
+					Status = StatusCodes.Status409Conflict,
+					Detail = "This data was changed by someone else at the same time. Please reload and try again."
+				};
+
+				return await ErrorHandlingHelpers.WriteProblemAsync(
+					httpContext, problemDetailsService, conflictProblem, exception);
+			}
 			if (exception is not DbUpdateException { InnerException: PostgresException postgresError })
 			{
 				return false;

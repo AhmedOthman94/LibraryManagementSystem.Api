@@ -45,7 +45,8 @@ namespace LibraryManagementSystemAPI.Endpoints
 				.ProducesProblem(StatusCodes.Status409Conflict);
 
 			group.MapDelete("/{id:guid}", Delete)
-				.ProducesProblem(StatusCodes.Status404NotFound);
+				.ProducesProblem(StatusCodes.Status404NotFound)
+				.ProducesProblem(StatusCodes.Status409Conflict);
 		}
 
 		private static async Task<Ok<PagedResponse<MemberResponse>>> GetAll(

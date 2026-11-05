@@ -9,6 +9,7 @@ using LibraryManagementSystemAPI.Services.Authors;
 using LibraryManagementSystemAPI.Services.BookCopies;
 using LibraryManagementSystemAPI.Services.Books;
 using LibraryManagementSystemAPI.Services.Categories;
+using LibraryManagementSystemAPI.Services.Loans;
 using LibraryManagementSystemAPI.Services.Members;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -76,6 +77,7 @@ builder.Services.AddScoped<IAuthorService, AuthorService>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<IBookCopyService, BookCopyService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<ILoanService, LoanService>();
 
 var app = builder.Build();
 
@@ -105,6 +107,7 @@ app.MapCategoryEndpoints();
 app.MapBookEndpoints();
 app.MapBookCopyEndpoints();
 app.MapMemberEndpoints();
+app.MapLoanEndpoints();
 app.MapControllers();
 
 app.Run();

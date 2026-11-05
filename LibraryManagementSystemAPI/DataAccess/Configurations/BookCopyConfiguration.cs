@@ -22,6 +22,10 @@ namespace LibraryManagementSystemAPI.DataAccess.Configurations
 				.HasMaxLength(20)
 				.IsRequired();
 
+			// Optimistic concurrency: EF updates the copy only if nobody changed it since we read it
+			builder.Property(c => c.Version)
+				.IsRowVersion();
+
 			builder.Property(c => c.ShelfLocation)
 				.HasMaxLength(50);
 
