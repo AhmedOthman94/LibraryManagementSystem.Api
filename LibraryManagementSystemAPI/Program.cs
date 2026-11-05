@@ -4,6 +4,7 @@ using LibraryManagementSystemAPI.Endpoints;
 using LibraryManagementSystemAPI.ErrorHandling;
 using LibraryManagementSystemAPI.Filters;
 using LibraryManagementSystemAPI.Services.Authors;
+using LibraryManagementSystemAPI.Services.Books;
 using LibraryManagementSystemAPI.Services.Categories;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -48,6 +49,7 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 // Scoped = one instance per HTTP request, same lifetime as LibraryDbContext
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthorService, AuthorService>();
+builder.Services.AddScoped<IBookService, BookService>();
 
 var app = builder.Build();
 
